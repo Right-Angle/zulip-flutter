@@ -278,8 +278,13 @@ class PushDeviceManager extends PerAccountStoreBase {
   ///   https://firebase.google.com/docs/cloud-messaging/manage-tokens#ensuring-registration-token-freshness
   static const _tokenRepeatInterval = Duration(days: 30);
 
+  // RA-fork: chat.rightangle.dev runs its own push bouncer (zilencer),
+  // so push registrations are encrypted to its key, not Zulip's.
+  // Generated on the server via:
+  //   manage.py manage_push_registration_encryption_keys --add
+  // (private half lives in the server's /etc/zulip/zulip-secrets.conf).
   @visibleForTesting
-  static final bouncerPublicKey = base64Decode('mm4F/3WLqECY637NulC5j/ZeHkmpwmtlfIxwt8MfREM='); // generated 2026-02-24
+  static final bouncerPublicKey = base64Decode('qvb9HnHU0zlb/JNZwM7Ys5o1FARSUPAgko2MqpgQH0g='); // generated 2026-07-17
 
   static Future<Uint8List> _encryptToBouncer(Uint8List publicKey, String plaintext) async {
     final sodium = await ZulipBinding.instance.sodiumInit();

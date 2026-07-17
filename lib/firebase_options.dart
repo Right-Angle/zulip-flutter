@@ -13,12 +13,14 @@ import 'package:firebase_core/firebase_core.dart';
 /// For details, see:
 ///   https://developers.google.com/android/guides/google-services-plugin#processing_the_json_file
 const kFirebaseOptionsAndroid = FirebaseOptions(
-  // This `appId` and `messagingSenderId` are the same as in zulip-mobile;
-  // see zulip-mobile:android/app/src/main/res/values/firebase.xml .
-  appId: '1:${_ZulipFirebaseOptions.projectNumber}:android:6ae61ae43a7c3410',
-  messagingSenderId: _ZulipFirebaseOptions.projectNumber,
-  projectId: _ZulipFirebaseOptions.projectId,
-  apiKey: _ZulipFirebaseOptions.firebaseApiKey,
+  // Right Angle's own Firebase project (`sid-personal`), so that our
+  // self-hosted server can deliver notifications via FCM directly,
+  // rather than through Zulip's notification bouncer.
+  // Registered for package `dev.rightangle.chat`.
+  appId: '1:${_RightAngleFirebaseOptions.projectNumber}:android:359191414dc129474f76d7',
+  messagingSenderId: _RightAngleFirebaseOptions.projectNumber,
+  projectId: _RightAngleFirebaseOptions.projectId,
+  apiKey: _RightAngleFirebaseOptions.firebaseApiKey,
 );
 
 /// Configuration used for finding the notification token on iOS.
@@ -35,18 +37,23 @@ const kFirebaseOptionsAndroid = FirebaseOptions(
 /// and they let us initialize the Firebase library so that we can do that.
 ///
 /// TODO: Cut out Firebase for APNs and use a thinner platform-API binding.
+///
+/// TODO(iOS): No iOS app is registered in the `sid-personal` Firebase
+///   project yet — this app currently ships Android-only.  Before building
+///   for iOS, register an iOS app for the bundle ID and replace the `ios`
+///   appId hash below.
 const kFirebaseOptionsIos = FirebaseOptions(
-  appId: '1:${_ZulipFirebaseOptions.projectNumber}:ios:9cad34899ca57ba6',
-  messagingSenderId: _ZulipFirebaseOptions.projectNumber,
-  projectId: _ZulipFirebaseOptions.projectId,
-  apiKey: _ZulipFirebaseOptions.firebaseApiKey,
+  appId: '1:${_RightAngleFirebaseOptions.projectNumber}:ios:0000000000000000',
+  messagingSenderId: _RightAngleFirebaseOptions.projectNumber,
+  projectId: _RightAngleFirebaseOptions.projectId,
+  apiKey: _RightAngleFirebaseOptions.firebaseApiKey,
 );
 
-abstract class _ZulipFirebaseOptions {
-  static const projectNumber = '835904834568';
+abstract class _RightAngleFirebaseOptions {
+  static const projectNumber = '386885828342';
 
   // Despite its value, this name applies across Android and iOS.
-  static const projectId = 'zulip-android';
+  static const projectId = 'sid-personal';
 
   // Despite the name, this Google Cloud "API key" is a very different kind
   // of thing from a Zulip "API key".  In particular, it's designed to be
@@ -54,13 +61,9 @@ abstract class _ZulipFirebaseOptions {
   // fundamentally public.  See docs:
   //   https://cloud.google.com/docs/authentication/api-keys
   //
-  // This key was created fresh for this use in zulip-flutter.
-  // It's easy to create additional keys associated with the same `appId`
-  // and other details above, and to enable or disable individual keys.
-  // See the Google Cloud console:
-  //   https://console.cloud.google.com/apis/credentials
-  //
-  // TODO: Perhaps use a different key in published builds; still fundamentally
-  //   public, but would avoid accidental reuse in dev or modified builds.
-  static const firebaseApiKey = 'AIzaSyC6kw5sqCYjxQl2Lbd_8MDmc1lu2EG0pY4';
+  // Auto-created with the Android app registration in the `sid-personal`
+  // Firebase project.  Like all Firebase Android API keys, it's designed to
+  // be included in published client builds and is fundamentally public:
+  //   https://cloud.google.com/docs/authentication/api-keys
+  static const firebaseApiKey = 'AIzaSyA1nZ0sUbXl_iLk0FAXiJvdIXalE2pq7eU';
 }

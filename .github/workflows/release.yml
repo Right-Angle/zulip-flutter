@@ -12,6 +12,9 @@ name: Release
 on:
   push:
     tags: ['*-ra*']
+  # Dispatched at a tag ref by the Upstream sync workflow (tags pushed
+  # with GITHUB_TOKEN don't fire `push` events — GitHub's recursion guard).
+  workflow_dispatch:
 
 permissions:
   contents: write

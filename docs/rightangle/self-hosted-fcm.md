@@ -168,6 +168,42 @@ above), then the app.
 
 ---
 
+## Distribution — GitHub Releases via Actions
+
+Releases live at `https://github.com/Right-Angle/zulip-flutter/releases`
+(the repo is public; the APK contains only public identifiers, and the
+server is invite-only).
+
+**Cutting a release** (after a rebase or any fork change):
+
+```bash
+git fetch upstream && git rebase upstream/main   # or a release tag
+flutter analyze --no-pub && flutter test --no-pub
+git push -f origin rightangle-chat
+git tag <upstream-version>-raN    # e.g. 30.0.273-ra1, matching pubspec version
+git push origin <tag>
+```
+
+Pushing the tag triggers `.github/workflows/release.yml`, which builds a
+**signed** APK and publishes the GitHub Release automatically.
+
+**Signing identity** (Android updates require the same key forever):
+
+| Copy | Where |
+| --- | --- |
+| Canonical | GCP Secret Manager `android-keystore-chat` (tar.gz of `release.keystore` + `release-keystore.properties`; byte-verified) |
+| CI | repo Actions secrets `ANDROID_KEYSTORE_BASE64` + `ANDROID_KEYSTORE_PASSWORD` |
+| Local build | `android/release.keystore` + `android/release-keystore.properties` (git-ignored) |
+
+Losing the keystore means every device must uninstall/reinstall — treat
+the Secret Manager copy as precious. Restore:
+`gcloud secrets versions access latest --secret=android-keystore-chat --project=sid-personal | tar xz -C android/`
+
+**Team install**: open the Releases page on the phone, download the APK,
+approve the browser-install prompt. Coming from the official Zulip app or
+a debug build: uninstall it first (different signature). Updates are
+manual — download the newer release APK over the installed one.
+
 ## Rotating the E2EE bouncer key
 
 Rotation requires coordinating server + app (the app pins one public key):

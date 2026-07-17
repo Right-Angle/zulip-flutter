@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 108 108" fill="none">
+  <!-- Right Angle Solutions "R" mark, full color, on transparent background.
+       Laid out on the Android adaptive-icon 108dp grid, with the mark
+       sized to stay inside the 66dp safe zone.
+       Paths extracted from the brand vector source
+       (Logo/eps/logo_icon_1.eps); coordinates are in that file's space. -->
+  <g transform="translate(34.3841 29) scale(0.1307724) translate(-390 -348.828125)">
+    <circle fill="#211E4D" cx="553.236328" cy="488.443359" r="136.763672"/>
+    <path fill="#5E83F6" d="M 690 731.171875 L 390 731.171875 L 390 348.828125 Z"/>
+    <path fill="#FF7A54" d="M 552.53125 351.394531 C 465.070312 365.664062 397.265625 438.46875 390.597656 528.238281 L 390 527.941406 L 390 348.828125 Z"/>
+  </g>
+</svg>

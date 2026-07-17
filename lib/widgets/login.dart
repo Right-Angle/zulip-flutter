@@ -153,6 +153,9 @@ class _AddAccountPageState extends State<AddAccountPage> {
   @override
   void initState() {
     super.initState();
+    // RA-fork: preset our server's URL, so users don't have to type it.
+    // The field stays editable, for connecting to a test server.
+    _controller.text = 'chat.rightangle.dev';
     _parseResult = _controller.tryParse();
     _controller.addListener(_serverUrlChanged);
   }
@@ -244,6 +247,11 @@ class _AddAccountPageState extends State<AddAccountPage> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 400),
             child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              // RA-fork: show the Right Angle mark above the login form.
+              Padding(
+                padding: const EdgeInsets.only(bottom: 24),
+                child: Image.asset('assets/app-icons/rightangle-login.png',
+                  width: 96, height: 96)),
               // TODO(#111) Perhaps give tappable realm URL suggestions based on text typed so far
               TextField(
                 controller: _controller,

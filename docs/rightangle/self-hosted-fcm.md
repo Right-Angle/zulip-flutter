@@ -152,12 +152,13 @@ git rebase <upstream-tag-or-main> rightangle-chat
 #   pubspec.yaml                          (login PNG asset — RA-fork)
 #   docs/rightangle/                      (this doc)
 flutter analyze --no-pub && flutter test --no-pub
-flutter build apk --release   # sign per release process
-# distribute (Play Store rollout, or APK)
+# then tag and push — CI builds and publishes the signed release
+# (see "Distribution" below)
 ```
 
 **Watch these two files during rebases** — if upstream touches them,
 re-check our edits still apply cleanly:
+
 - `lib/model/push_device.dart` (registration/E2EE logic evolves here)
 - `lib/firebase_options.dart`
 

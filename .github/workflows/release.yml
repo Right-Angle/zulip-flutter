@@ -1,0 +1,70 @@
+name: Release
+# RA-fork: build a signed APK and publish it as a GitHub Release
+# whenever a release tag (e.g. 30.0.273-ra1) is pushed.
+#
+# Release procedure and keystore recovery:
+#   docs/rightangle/self-hosted-fcm.md
+#
+# Requires two repository Actions secrets:
+#   ANDROID_KEYSTORE_BASE64   — base64 of android/release.keystore
+#   ANDROID_KEYSTORE_PASSWORD — its store/key password
+
+on:
+  push:
+    tags: ['*-ra*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: "Build signed APK and publish release"
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Set up JDK
+      uses: actions/setup-java@v5
+      with:
+        java-version: 17
+        distribution: temurin
+
+    - name: Clone Flutter SDK
+      run: tools/ci/clone-flutter-sdk
+
+    - name: Download our dependencies (flutter pub get)
+      run: flutter pub get
+
+    - name: Restore signing config
+      env:
+        KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      run: |
+        printf '%s' "$KEYSTORE_BASE64" | base64 -d > android/release.keystore
+        {
+          echo "storeFile=release.keystore"
+          echo "storePassword=$KEYSTORE_PASSWORD"
+          echo "keyAlias=rightangle-chat"
+          echo "keyPassword=$KEYSTORE_PASSWORD"
+        } > android/release-keystore.properties
+
+    - name: Build signed APK
+      run: flutter build apk -Psigned
+
+    - name: Publish GitHub release with APK
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        cp build/app/outputs/flutter-apk/app-release.apk \
+          "Chat-${GITHUB_REF_NAME}.apk"
+        {
+          echo "Signed release APK for Right Angle Chat (dev.rightangle.chat)."
+          echo
+          echo "Install: open this page on your Android device, download the"
+          echo "APK, and open it (allow installs from your browser if asked)."
+          echo "The app comes preset for https://chat.rightangle.dev."
+        } > notes.md
+        gh release create "$GITHUB_REF_NAME" "Chat-${GITHUB_REF_NAME}.apk" \
+          --repo "$GITHUB_REPOSITORY" \
+          --title "Chat $GITHUB_REF_NAME" \
+          --notes-file notes.md

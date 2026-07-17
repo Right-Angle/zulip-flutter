@@ -134,13 +134,27 @@ versions it was taken from).
 
 ## 📱 Client (fork) upgrade playbook
 
-**Routine path — automated quarterly PR.** The `Upstream sync` workflow
-(`.github/workflows/upstream-sync.yml`) runs on the 1st of Jan/Apr/Jul/Oct
-(and on demand from the Actions tab). It mirrors upstream into `main` and
-opens a PR into `rightangle-chat` with a review checklist. Resolve any
-conflicts on the PR branch, merge, tag `<version>-raN` — released.
+**Routine path — fully automatic.** The `Upstream sync` workflow
+(`.github/workflows/upstream-sync.yml`) runs on the 1st of every odd
+month (Jan/Mar/May/…, and on demand from the Actions tab):
 
-**Manual path — rebase** (for keeping history linear, or off-schedule):
+- rebases `rightangle-chat` onto upstream `main` (history stays linear —
+  no merge commits);
+- runs `flutter analyze` + `flutter test`;
+- if green: force-pushes, auto-tags the next `<version>-raN`, and
+  dispatches the Release workflow — a new signed APK appears on the
+  Releases page with no human involvement;
+- if the rebase conflicts or checks fail: pushes **nothing** and opens
+  an issue instead — handle it via the manual path below.
+
+Trade-off to know: a green run ships automatically. Devices don't
+auto-update (installs are manual), so a bad release is recovered by
+tagging a fixed one. Watch the repo (Watch → Custom → Releases) to get
+an email whenever a release lands. The 2-month cadence also keeps the
+scheduled workflow inside GitHub's 60-day activity window, so it can't
+be auto-disabled.
+
+**Manual path — rebase** (conflicts, or off-schedule updates):
 
 ```bash
 git fetch upstream

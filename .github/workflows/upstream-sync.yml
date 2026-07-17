@@ -1,65 +1,104 @@
 name: Upstream sync
-# RA-fork: quarterly, open a PR bringing zulip/zulip-flutter changes
-# into our rightangle-chat branch. Review, resolve any conflicts on the
-# PR branch, merge — then tag <version>-raN to cut a release.
+# RA-fork: every 2 months (and on demand), rebase rightangle-chat onto
+# upstream zulip/zulip-flutter main. If the rebase is clean and
+# analyze+tests pass, force-push, auto-tag <version>-raN, and dispatch
+# the Release workflow — a fully automatic update + release.
+# On rebase conflicts or failing checks, nothing is pushed; an issue is
+# opened for manual attention instead (see the runbook's manual path).
 #
-# Also runnable on demand from the Actions tab (workflow_dispatch).
+# The 2-month cadence keeps repo activity well inside GitHub's 60-day
+# window, so this schedule never gets auto-disabled.
 
 on:
   schedule:
-    # 05:23 UTC on the 1st of Jan/Apr/Jul/Oct (odd minute per GitHub's
-    # guidance to avoid the top-of-hour scheduling crunch).
-    - cron: '23 5 1 1,4,7,10 *'
+    - cron: '23 5 1 1,3,5,7,9,11 *'   # 05:23 UTC, 1st of every odd month
   workflow_dispatch:
 
 permissions:
   contents: write
-  pull-requests: write
+  issues: write
+  actions: write
 
 jobs:
   sync:
-    name: "Open upstream-sync PR"
-    runs-on: ubuntu-latest
+    name: "Rebase on upstream, test, release"
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v6
       with:
+        ref: rightangle-chat
         fetch-depth: 0
 
     - name: Fetch upstream
+      id: fetch
       run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
         git remote add upstream https://github.com/zulip/zulip-flutter.git
         git fetch upstream main
+        # Mirror upstream into fork main (pure mirror; fails loudly if
+        # someone committed to main directly).
+        git push origin upstream/main:refs/heads/main
+        if git merge-base --is-ancestor upstream/main HEAD; then
+          echo "behind=false" >> "$GITHUB_OUTPUT"
+          echo "Already up to date with upstream."
+        else
+          echo "behind=true" >> "$GITHUB_OUTPUT"
+        fi
 
-    - name: Mirror upstream/main to fork main
-      # Fork main is a pure mirror; if this fails, someone committed to
-      # main directly — investigate rather than force.
-      run: git push origin upstream/main:refs/heads/main
-
-    - name: Open sync PR if upstream has new commits
+    - name: Rebase onto upstream/main
+      id: rebase
+      if: steps.fetch.outputs.behind == 'true'
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
-        if git merge-base --is-ancestor upstream/main origin/rightangle-chat; then
-          echo "rightangle-chat already contains upstream/main; nothing to do."
-          exit 0
+        if ! git rebase upstream/main; then
+          git rebase --abort
+          gh issue create --repo "$GITHUB_REPOSITORY" \
+            --title "Upstream sync: rebase conflict ($(date -u +%Y-%m-%d))" \
+            --body "Automatic rebase of rightangle-chat onto upstream/main hit conflicts. Run the manual rebase path in docs/rightangle/self-hosted-fcm.md."
+          echo "Rebase conflicted; issue opened." >&2
+          exit 1
         fi
-        branch="upstream-sync-$(date -u +%Y-%m-%d)"
-        git push origin upstream/main:refs/heads/"$branch"
-        count=$(git rev-list --count origin/rightangle-chat..upstream/main)
-        {
-          echo "Quarterly sync: $count new upstream commits."
-          echo
-          echo "Review checklist (docs/rightangle/self-hosted-fcm.md):"
-          echo '- [ ] Conflicts resolved, if any (resolve on this branch)'
-          echo '- [ ] `lib/model/push_device.dart` — our bouncerPublicKey edit intact'
-          echo '- [ ] `lib/firebase_options.dart` — our Firebase project intact'
-          echo '- [ ] `flutter analyze --no-pub && flutter test --no-pub`'
-          echo '- [ ] Server version still supported by the app (upgrade server first if not)'
-          echo
-          echo "After merging: \`git tag <pubspec-version>-raN && git push origin <tag>\`"
-          echo "— the Release workflow builds and publishes the signed APK."
-        } > body.md
-        gh pr create --repo "$GITHUB_REPOSITORY" \
-          --base rightangle-chat --head "$branch" \
-          --title "Sync with upstream zulip-flutter ($(date -u +%Y-%m-%d))" \
-          --body-file body.md
+
+    - name: Set up JDK
+      if: steps.fetch.outputs.behind == 'true'
+      uses: actions/setup-java@v5
+      with:
+        java-version: 17
+        distribution: temurin
+
+    - name: Clone Flutter SDK
+      if: steps.fetch.outputs.behind == 'true'
+      run: tools/ci/clone-flutter-sdk
+
+    - name: Analyze and test
+      if: steps.fetch.outputs.behind == 'true'
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        flutter pub get
+        if ! { flutter analyze --no-pub && flutter test --no-pub; }; then
+          gh issue create --repo "$GITHUB_REPOSITORY" \
+            --title "Upstream sync: checks failed after rebase ($(date -u +%Y-%m-%d))" \
+            --body "Rebase onto upstream/main was clean, but flutter analyze/test failed. Nothing was pushed. Investigate per docs/rightangle/self-hosted-fcm.md."
+          echo "Checks failed; issue opened." >&2
+          exit 1
+        fi
+
+    - name: Push, tag, and dispatch release
+      if: steps.fetch.outputs.behind == 'true'
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        git push --force-with-lease origin HEAD:rightangle-chat
+        base=$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
+        git fetch --tags --quiet
+        last=$(git tag -l "${base}-ra*" | sed 's/.*-ra//' | sort -n | tail -1)
+        tag="${base}-ra$(( ${last:-0} + 1 ))"
+        git tag "$tag"
+        git push origin "$tag"
+        # A tag pushed with GITHUB_TOKEN doesn't trigger workflows
+        # (recursion guard) — dispatch the Release workflow explicitly.
+        gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref "refs/tags/$tag"
+        echo "Released as $tag"

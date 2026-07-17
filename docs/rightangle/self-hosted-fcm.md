@@ -134,7 +134,13 @@ versions it was taken from).
 
 ## 📱 Client (fork) upgrade playbook
 
-The fork's delta is deliberately tiny. To take an upstream release:
+**Routine path — automated quarterly PR.** The `Upstream sync` workflow
+(`.github/workflows/upstream-sync.yml`) runs on the 1st of Jan/Apr/Jul/Oct
+(and on demand from the Actions tab). It mirrors upstream into `main` and
+opens a PR into `rightangle-chat` with a review checklist. Resolve any
+conflicts on the PR branch, merge, tag `<version>-raN` — released.
+
+**Manual path — rebase** (for keeping history linear, or off-schedule):
 
 ```bash
 git fetch upstream
@@ -175,12 +181,10 @@ Releases live at `https://github.com/Right-Angle/zulip-flutter/releases`
 (the repo is public; the APK contains only public identifiers, and the
 server is invite-only).
 
-**Cutting a release** (after a rebase or any fork change):
+**Cutting a release** (after merging a sync PR, or any fork change):
 
 ```bash
-git fetch upstream && git rebase upstream/main   # or a release tag
 flutter analyze --no-pub && flutter test --no-pub
-git push -f origin rightangle-chat
 git tag <upstream-version>-raN    # e.g. 30.0.273-ra1, matching pubspec version
 git push origin <tag>
 ```

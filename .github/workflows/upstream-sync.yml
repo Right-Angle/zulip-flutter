@@ -1,0 +1,65 @@
+name: Upstream sync
+# RA-fork: quarterly, open a PR bringing zulip/zulip-flutter changes
+# into our rightangle-chat branch. Review, resolve any conflicts on the
+# PR branch, merge — then tag <version>-raN to cut a release.
+#
+# Also runnable on demand from the Actions tab (workflow_dispatch).
+
+on:
+  schedule:
+    # 05:23 UTC on the 1st of Jan/Apr/Jul/Oct (odd minute per GitHub's
+    # guidance to avoid the top-of-hour scheduling crunch).
+    - cron: '23 5 1 1,4,7,10 *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    name: "Open upstream-sync PR"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - name: Fetch upstream
+      run: |
+        git remote add upstream https://github.com/zulip/zulip-flutter.git
+        git fetch upstream main
+
+    - name: Mirror upstream/main to fork main
+      # Fork main is a pure mirror; if this fails, someone committed to
+      # main directly — investigate rather than force.
+      run: git push origin upstream/main:refs/heads/main
+
+    - name: Open sync PR if upstream has new commits
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        if git merge-base --is-ancestor upstream/main origin/rightangle-chat; then
+          echo "rightangle-chat already contains upstream/main; nothing to do."
+          exit 0
+        fi
+        branch="upstream-sync-$(date -u +%Y-%m-%d)"
+        git push origin upstream/main:refs/heads/"$branch"
+        count=$(git rev-list --count origin/rightangle-chat..upstream/main)
+        {
+          echo "Quarterly sync: $count new upstream commits."
+          echo
+          echo "Review checklist (docs/rightangle/self-hosted-fcm.md):"
+          echo '- [ ] Conflicts resolved, if any (resolve on this branch)'
+          echo '- [ ] `lib/model/push_device.dart` — our bouncerPublicKey edit intact'
+          echo '- [ ] `lib/firebase_options.dart` — our Firebase project intact'
+          echo '- [ ] `flutter analyze --no-pub && flutter test --no-pub`'
+          echo '- [ ] Server version still supported by the app (upgrade server first if not)'
+          echo
+          echo "After merging: \`git tag <pubspec-version>-raN && git push origin <tag>\`"
+          echo "— the Release workflow builds and publishes the signed APK."
+        } > body.md
+        gh pr create --repo "$GITHUB_REPOSITORY" \
+          --base rightangle-chat --head "$branch" \
+          --title "Sync with upstream zulip-flutter ($(date -u +%Y-%m-%d))" \
+          --body-file body.md

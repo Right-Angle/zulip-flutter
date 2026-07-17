@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="108" height="108" viewBox="0 0 108 108">
+  <!-- Solid white square, full-bleed: the background layer of the
+       Android adaptive icon, matching the brand's presentation of the
+       full-color mark on white. -->
+  <rect width="108" height="108" fill="#FFFFFF"/>
+</svg>

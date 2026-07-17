@@ -47,16 +47,24 @@ jq --version >/dev/null 2>&1 \
     || die "Need jq -- try 'apt install jq'."
 
 
-# White Z, on transparent background.
-src_icon_foreground="${root_dir}"/assets/app-icons/zulip-white-z-on-transparent.svg
+# Full-color Right Angle "R" mark, on transparent background,
+# on the adaptive-icon 108dp grid.
+src_icon_foreground="${root_dir}"/assets/app-icons/rightangle-mark-on-transparent.svg
 
-# Gradient-colored square, full-bleed.
-src_icon_background="${root_dir}"/assets/app-icons/zulip-gradient.svg
+# White outline "R" mark, on transparent background,
+# on the adaptive-icon 108dp grid.
+src_icon_monochrome="${root_dir}"/assets/app-icons/rightangle-outline-on-transparent.svg
 
-# Combination of ${src_icon_foreground} upon ${src_icon_background}...
-# more or less.  (The foreground layer is larger, with less padding,
-# and the SVG is different in random other ways.)
-src_icon_combined="${root_dir}"/assets/app-icons/zulip-combined.svg
+# White outline "R" mark, on transparent background,
+# on the notification-icon 24dp grid.
+src_icon_notification="${root_dir}"/assets/app-icons/rightangle-outline-notification.svg
+
+# Solid white square, full-bleed.
+src_icon_background="${root_dir}"/assets/app-icons/rightangle-white-background.svg
+
+# Combination of ${src_icon_foreground} upon ${src_icon_background},
+# on the iOS app-icon grid (which has no transparency and less padding).
+src_icon_combined="${root_dir}"/assets/app-icons/rightangle-combined.svg
 
 
 make_one_ios_app_icon() {
@@ -150,7 +158,13 @@ make_android() {
     # Launcher icons go into mipmaps:
     #   https://developer.android.com/training/multiscreen/screendensities#mipmap
     make_android_icon "${src_icon_background}" 108 main mipmap ic_launcher_background
-    make_android_icon "${src_icon_foreground}" 48 main mipmap ic_launcher_monochrome
+    make_android_icon "${src_icon_foreground}" 108 main mipmap ic_launcher_foreground
+    make_android_icon "${src_icon_monochrome}" 108 main mipmap ic_launcher_monochrome
+
+    # The notification icon; rendered by the system as a pure-alpha
+    # silhouette.  The resource name is referred to in lib/notifications/
+    # and in keep.xml, so it keeps its historical name.
+    make_android_icon "${src_icon_notification}" 24 main drawable zulip_notification
 }
 
 make_ios

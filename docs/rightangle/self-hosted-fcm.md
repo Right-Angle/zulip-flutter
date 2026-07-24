@@ -147,6 +147,16 @@ month (Jan/Mar/May/…, and on demand from the Actions tab):
 - if the rebase conflicts or checks fail: pushes **nothing** and opens
   an issue instead — handle it via the manual path below.
 
+Requires a repo secret **`SYNC_TOKEN`** — a PAT with `workflow` scope.
+The built-in `GITHUB_TOKEN` is forbidden from pushing `.github/workflows/*`
+changes (which every upstream sync includes), so the workflow authenticates
+its pushes with this PAT instead. Create it as a fine-grained PAT scoped to
+`Right-Angle/zulip-flutter` with **Contents: R/W, Workflows: R/W,
+Issues: R/W** (or a classic PAT with `repo` + `workflow`), and add it under
+Settings → Secrets and variables → Actions → `SYNC_TOKEN`. Rotate before it
+expires or the schedule silently starts failing (it opens no issue if it
+can't even push — watch for the run itself going red).
+
 Trade-off to know: a green run ships automatically. Devices don't
 auto-update (installs are manual), so a bad release is recovered by
 tagging a fixed one. Watch the repo (Watch → Custom → Releases) to get
